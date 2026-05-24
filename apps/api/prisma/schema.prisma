@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────
+
+enum Role {
+  FARMER
+  BUYER
+  AGRONOMIST
+  ADMIN
+}
+
+enum OtpType {
+  EMAIL_VERIFY
+  PHONE_VERIFY
+  PASSWORD_RESET
+}
+
+enum ProductStatus {
+  ACTIVE
+  SOLD
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  SSLCOMMERZ
+  BKASH
+  NAGAD
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum NotificationType {
+  ORDER
+  PAYMENT
+  CHAT
+  WEATHER
+  DISEASE
+  MARKET
+  SYSTEM
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+// ─── AUTH ────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?  @unique
+  role      Role     @default(FARMER)
+  avatar    String?
+  isVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens    RefreshToken[]
+  otps             OTP[]
+  farms            Farm[]
+  products         Product[]
+  orders           Order[]
+  payments         PaymentTransaction[]
+  reviewsGiven     Review[]       @relation("BuyerReviews")
+  reviewsReceived  Review[]       @relation("SellerReviews")
+  disputes         Dispute[]
+  cropAnalyses     CropAnalysis[]
+  aiChatHistories  AiChatHistory[]
+  weatherLogs      WeatherLog[]
+  buyerRooms       ChatRoom[]     @relation("BuyerRooms")
+  sellerRooms      ChatRoom[]     @relation("SellerRooms")
+  messages         Message[]
+  notifications    Notification[]
+  locationLogs     LocationLog[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      OtpType
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// ─── FARM ────────────────────────────────────────
+
+model Farm {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  lat       Float?
+  lng       Float?
+  area      Float
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crops     Crop[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Crop {
+  id        String   @id @default(cuid())
+  name      String
+  season    String?
+  farmId    String
+  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// ─── MARKETPLACE ─────────────────────────────────
+
+model Category {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  icon         String?
+  slug         String         @unique
+  products     Product[]
+  marketPrices MarketPrice[]
+  createdAt    DateTime       @default(now())
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  price       Float
+  quantity    Float
+  unit        String
+  imageUrl    String?
+  location    String
+  lat         Float?
+  lng         Float?
+  status      ProductStatus @default(ACTIVE)
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  sellerId    String
+  seller      User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  orders      Order[]
+  chatRooms   ChatRoom[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  quantity    Float
+  totalPrice  Float
+  status      OrderStatus @default(PENDING)
+  address     String?
+  deliveryLat Float?
+  deliveryLng Float?
+  buyerId     String
+  buyer       User        @relation(fields: [buyerId], references: [id])
+  productId   String
+  product     Product     @relation(fields: [productId], references: [id])
+  payment     PaymentTransaction?
+  review      Review?
+  dispute     Dispute?
+  locationLogs LocationLog[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model PaymentTransaction {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  amount        Float
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  gatewayData   Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  buyerId   String
+  buyer     User     @relation("BuyerReviews", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User     @relation("SellerReviews", fields: [sellerId], references: [id])
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Dispute {
+  id          String        @id @default(cuid())
+  orderId     String        @unique
+  order       Order         @relation(fields: [orderId], references: [id])
+  raisedById  String
+  raisedBy    User          @relation(fields: [raisedById], references: [id])
+  reason      String
+  status      DisputeStatus @default(OPEN)
+  resolution  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// ─── AI ──────────────────────────────────────────
+
+model CropAnalysis {
+  id         String   @id @default(cuid())
+  imageUrl   String
+  disease    String?
+  confidence Float?
+  advice     String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model AiChatHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  response  String
+  role      ChatRole @default(USER)
+  createdAt DateTime @default(now())
+}
+
+model WeatherLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location    String
+  lat         Float?
+  lng         Float?
+  weatherData Json
+  aiAdvice    String?
+  createdAt   DateTime @default(now())
+}
+
+model MarketPrice {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  cropName   String
+  minPrice   Float
+  maxPrice   Float
+  avgPrice   Float
+  unit       String
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+// ─── CHAT ─────────────────────────────────────────
+
+model ChatRoom {
+  id        String    @id @default(cuid())
+  buyerId   String
+  buyer     User      @relation("BuyerRooms", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User      @relation("SellerRooms", fields: [sellerId], references: [id])
+  productId String
+  product   Product   @relation(fields: [productId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── NOTIFICATION ─────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  body      String
+  type      NotificationType
+  read      Boolean          @default(false)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+}
+
+// ─── TRACKING ─────────────────────────────────────
+
+model LocationLog {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now())
+}
