@@ -2,15 +2,16 @@ import path from 'path';
 import { defineConfig } from 'prisma/config';
 import 'dotenv/config';
 
-const DIRECT_URL = process.env.DATABASE_URL; // এখন Session Pooler (5432)
-const POOLER_URL = process.env.DATABASE_URL_POOLER;
+const DIRECT_URL = process.env.DATABASE_URL as string;
+const POOLER_URL = process.env.DATABASE_URL_POOLER as string;
 
 export default defineConfig({
+  // @ts-expect-error - earlyAccess is required for prisma.config.ts but might not be typed yet
   earlyAccess: true,
   schema: path.join('prisma', 'schema.prisma'),
 
   datasource: {
-    url: DIRECT_URL, // migration-এর জন্য
+    url: DIRECT_URL,
   },
 
   migrate: {
@@ -19,7 +20,7 @@ export default defineConfig({
       const { default: pg } = await import('pg');
 
       const pool = new pg.Pool({
-        connectionString: DIRECT_URL,
+        connectionString: POOLER_URL || DIRECT_URL,
         ssl: { rejectUnauthorized: false },
       });
 
