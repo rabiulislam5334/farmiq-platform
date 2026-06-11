@@ -106,22 +106,22 @@ export class AuthService {
 
   // ── Helpers ──────────────────────────────────
 
-  private async generateTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+private async generateTokens(userId: string, email: string, role: string) {
+  const payload = { sub: userId, email, role };
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET,
-        expiresIn: process.env.JWT_EXPIRES_IN || '15m',
-      }),
-      this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-      }),
-    ]);
+  const [accessToken, refreshToken] = await Promise.all([
+    this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: 900, // 15 minutes (seconds এ)
+    }),
+    this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: 604800, // 7 days (seconds এ)
+    }),
+  ]);
 
-    return { accessToken, refreshToken };
-  }
+  return { accessToken, refreshToken };
+}
 
   private async saveRefreshToken(userId: string, token: string) {
     const expiresAt = new Date();
