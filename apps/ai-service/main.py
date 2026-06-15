@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from routers.crop import router as crop_router
 from routers.chat import router as chat_router
+from routers.weather import router as weather_router
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ app.add_middleware(
 
 app.include_router(crop_router)
 app.include_router(chat_router)
+app.include_router(weather_router)
 
 @app.get("/")
 def root():
