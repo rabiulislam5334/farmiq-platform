@@ -16,16 +16,13 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // Email already exists check
     const exists = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
     if (exists) throw new ConflictException('Email already registered');
 
-    // Password hash
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // User create
     const user = await this.prisma.user.create({
       data: {
         name: dto.name,
@@ -42,7 +39,6 @@ export class AuthService {
       },
     });
 
-    // Tokens generate
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
@@ -50,17 +46,14 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // User find
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    // Password check
     const passwordMatch = await bcrypt.compare(dto.password, user.password);
     if (!passwordMatch) throw new UnauthorizedException('Invalid credentials');
 
-    // Tokens generate
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
@@ -76,7 +69,6 @@ export class AuthService {
   }
 
   async refresh(userId: string, refreshToken: string) {
-    // RefreshToken check
     const tokenRecord = await this.prisma.refreshToken.findFirst({
       where: {
         userId,
@@ -89,7 +81,6 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('User not found');
 
-    // Old token delete, new token save
     await this.prisma.refreshToken.delete({ where: { id: tokenRecord.id } });
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
@@ -106,22 +97,22 @@ export class AuthService {
 
   // ── Helpers ──────────────────────────────────
 
-private async generateTokens(userId: string, email: string, role: string) {
-  const payload = { sub: userId, email, role };
+  private async generateTokens(userId: string, email: string, role: string) {
+    const payload = { sub: userId, email, role };
 
-  const [accessToken, refreshToken] = await Promise.all([
-    this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_SECRET,
-      expiresIn: 900, // 15 minutes (seconds এ)
-    }),
-    this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: 604800, // 7 days (seconds এ)
-    }),
-  ]);
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_SECRET as string,
+        expiresIn: 900,
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_REFRESH_SECRET as string,
+        expiresIn: 604800,
+      }),
+    ]);
 
-  return { accessToken, refreshToken };
-}
+    return { accessToken, refreshToken };
+  }
 
   private async saveRefreshToken(userId: string, token: string) {
     const expiresAt = new Date();
