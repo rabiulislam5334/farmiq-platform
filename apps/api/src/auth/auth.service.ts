@@ -68,6 +68,42 @@ export class AuthService {
     };
   }
 
+  async googleLogin(googleUser: {
+    email: string;
+    name: string;
+    avatar: string;
+  }) {
+    let user = await this.prisma.user.findUnique({
+      where: { email: googleUser.email },
+    });
+
+    if (!user) {
+      const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+      user = await this.prisma.user.create({
+        data: {
+          name: googleUser.name,
+          email: googleUser.email,
+          password: randomPassword,
+          avatar: googleUser.avatar,
+          isVerified: true,
+        },
+      });
+    }
+
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    await this.saveRefreshToken(user.id, tokens.refreshToken);
+
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      ...tokens,
+    };
+  }
+
   async refresh(userId: string, refreshToken: string) {
     const tokenRecord = await this.prisma.refreshToken.findFirst({
       where: {
@@ -93,6 +129,21 @@ export class AuthService {
       where: { userId, token: refreshToken },
     });
     return { message: 'Logged out successfully' };
+  }
+
+  async verifyRefreshToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        email: string;
+        role: string;
+      }>(token, {
+        secret: process.env.JWT_REFRESH_SECRET as string,
+      });
+      return payload;
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   // ── Helpers ──────────────────────────────────

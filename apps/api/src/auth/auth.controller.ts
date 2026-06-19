@@ -1,12 +1,15 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   Req,
   Res,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import type { Request, Response } from 'express';
@@ -81,5 +84,36 @@ export class AuthController {
     await this.authService.logout(userId, refreshToken);
     res.clearCookie('refreshToken');
     res.json({ success: true, message: 'Logged out successfully' });
+  }
+
+  // ── Google OAuth ──────────────────────────────────
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth(): Promise<void> {
+    // Google login page এ redirect হবে
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const googleUser = req.user as {
+      email: string;
+      name: string;
+      avatar: string;
+    };
+    const result = await this.authService.googleLogin(googleUser);
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.redirect(
+      `${process.env.CLIENT_URL ?? 'http://localhost:3000'}/auth/callback?token=${result.accessToken}`,
+    );
   }
 }
