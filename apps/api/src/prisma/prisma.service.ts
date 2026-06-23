@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
@@ -8,16 +8,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private client: PrismaClient;
 
   constructor() {
-    const connectionString =
-      process.env.DATABASE_URL_POOLER || process.env.DATABASE_URL;
-
-    console.log('DB URL:', connectionString?.substring(0, 50)); // debug
-
     const pool = new pg.Pool({
-      connectionString: connectionString as string,
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      connectionString: process.env.DATABASE_URL_POOLER as string,
+      ssl: { rejectUnauthorized: false },
     });
 
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -26,6 +19,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     this.client = new PrismaClient({ adapter } as any);
   }
 
+  // ── Models ──────────────────────────────────
   get user() {
     return this.client.user;
   }
@@ -82,6 +76,13 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
   get otp() {
     return this.client.oTP;
+  }
+
+  // ── Transaction ──────────────────────────────
+  async $transaction<T>(
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.client.$transaction(fn);
   }
 
   async onModuleInit() {
