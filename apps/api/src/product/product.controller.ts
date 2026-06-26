@@ -1,6 +1,14 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, UseGuards, Req,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -37,7 +45,11 @@ export class ProductController {
   findOne(@Param('id') id: string) {
     return this.productService.findOne(id);
   }
-
+  @Get(':id/related')
+  async findRelated(@Param('id') id: string) {
+    const product = await this.productService.findOne(id);
+    return this.productService.findRelated(id, product.data.categoryId);
+  }
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   update(

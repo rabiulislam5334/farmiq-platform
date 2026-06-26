@@ -28,18 +28,26 @@ enum ProductStatus {
 }
 
 enum OrderStatus {
-  PENDING
-  CONFIRMED
+  PAYMENT_PENDING
+  PAYMENT_CONFIRMED
+  SELLER_CONFIRMED
+  SELLER_REJECTED
+  PROCESSING
   SHIPPED
+  OUT_FOR_DELIVERY
   DELIVERED
+  COMPLETED
   CANCELLED
+  DISPUTED
+  REFUNDED
 }
 
 enum PaymentMethod {
   SSLCOMMERZ
   BKASH
   NAGAD
-  CASH
+  CARD
+  CASH_ON_DELIVERY
 }
 
 enum PaymentStatus {
@@ -74,16 +82,16 @@ enum ChatRole {
 // ─── AUTH ────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  phone     String?  @unique
-  role      Role     @default(FARMER)
-  avatar    String?
-  isVerified Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String          @id @default(cuid())
+  name             String
+  email            String          @unique
+  password         String
+  phone            String?         @unique
+  role             Role            @default(FARMER)
+  avatar           String?
+  isVerified       Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   refreshTokens    RefreshToken[]
   otps             OTP[]
@@ -91,17 +99,18 @@ model User {
   products         Product[]
   orders           Order[]
   payments         PaymentTransaction[]
-  reviewsGiven     Review[]       @relation("BuyerReviews")
-  reviewsReceived  Review[]       @relation("SellerReviews")
+  reviewsGiven     Review[]        @relation("BuyerReviews")
+  reviewsReceived  Review[]        @relation("SellerReviews")
   disputes         Dispute[]
   cropAnalyses     CropAnalysis[]
   aiChatHistories  AiChatHistory[]
   weatherLogs      WeatherLog[]
-  buyerRooms       ChatRoom[]     @relation("BuyerRooms")
-  sellerRooms      ChatRoom[]     @relation("SellerRooms")
+  buyerRooms       ChatRoom[]      @relation("BuyerRooms")
+  sellerRooms      ChatRoom[]      @relation("SellerRooms")
   messages         Message[]
   notifications    Notification[]
   locationLogs     LocationLog[]
+  wishlists        Wishlist[]
 }
 
 model RefreshToken {
@@ -152,13 +161,13 @@ model Crop {
 // ─── MARKETPLACE ─────────────────────────────────
 
 model Category {
-  id           String         @id @default(cuid())
-  name         String         @unique
+  id           String        @id @default(cuid())
+  name         String        @unique
   icon         String?
-  slug         String         @unique
+  slug         String        @unique
   products     Product[]
   marketPrices MarketPrice[]
-  createdAt    DateTime       @default(now())
+  createdAt    DateTime      @default(now())
 }
 
 model Product {
@@ -179,28 +188,29 @@ model Product {
   seller      User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   orders      Order[]
   chatRooms   ChatRoom[]
+  wishlists   Wishlist[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  quantity    Float
-  totalPrice  Float
-  status      OrderStatus @default(PENDING)
-  address     String?
-  deliveryLat Float?
-  deliveryLng Float?
-  buyerId     String
-  buyer       User        @relation(fields: [buyerId], references: [id])
-  productId   String
-  product     Product     @relation(fields: [productId], references: [id])
-  payment     PaymentTransaction?
-  review      Review?
-  dispute     Dispute?
+  id           String      @id @default(cuid())
+  quantity     Float
+  totalPrice   Float
+  status       OrderStatus @default(PAYMENT_PENDING)
+  address      String?
+  deliveryLat  Float?
+  deliveryLng  Float?
+  buyerId      String
+  buyer        User        @relation(fields: [buyerId], references: [id])
+  productId    String
+  product      Product     @relation(fields: [productId], references: [id])
+  payment      PaymentTransaction?
+  review       Review?
+  dispute      Dispute?
   locationLogs LocationLog[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model PaymentTransaction {
@@ -232,16 +242,27 @@ model Review {
 }
 
 model Dispute {
-  id          String        @id @default(cuid())
-  orderId     String        @unique
-  order       Order         @relation(fields: [orderId], references: [id])
-  raisedById  String
-  raisedBy    User          @relation(fields: [raisedById], references: [id])
-  reason      String
-  status      DisputeStatus @default(OPEN)
-  resolution  String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id         String        @id @default(cuid())
+  orderId    String        @unique
+  order      Order         @relation(fields: [orderId], references: [id])
+  raisedById String
+  raisedBy   User          @relation(fields: [raisedById], references: [id])
+  reason     String
+  status     DisputeStatus @default(OPEN)
+  resolution String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 // ─── AI ──────────────────────────────────────────
