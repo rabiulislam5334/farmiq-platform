@@ -5,7 +5,7 @@ import pg from 'pg';
 
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private client: PrismaClient;
+  private client: any;
 
   constructor() {
     const pool = new pg.Pool({
@@ -76,6 +76,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
   get otp() {
     return this.client.oTP;
+  }
+  get wishlist() {
+    return this.client.wishlist;
   }
 
   // ── Transaction ──────────────────────────────
