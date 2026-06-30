@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto';
 
@@ -28,7 +27,11 @@ export class OrderService {
       );
 
     const existingOrders = await this.prisma.order.count({
-      where: { buyerId, productId: dto.productId, status: 'PENDING' },
+      where: {
+        buyerId,
+        productId: dto.productId,
+        status: 'PAYMENT_PENDING',
+      },
     });
     if (existingOrders >= 5)
       throw new BadRequestException('Order limit exceeded for this product');
@@ -36,50 +39,47 @@ export class OrderService {
     const totalPrice = product.price * dto.quantity;
     const remainingQuantity = product.quantity - dto.quantity;
 
-    const order = await this.prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const newOrder = await tx.order.create({
-          data: {
-            productId: dto.productId,
-            buyerId,
-            quantity: dto.quantity,
-            totalPrice,
-            address: dto.address,
-            deliveryLat: dto.deliveryLat,
-            deliveryLng: dto.deliveryLng,
-          },
-          include: {
-            product: {
-              include: {
-                seller: {
-                  select: { id: true, name: true, phone: true },
-                },
+    const order = await this.prisma.$transaction(async (tx: any) => {
+      const newOrder = await tx.order.create({
+        data: {
+          productId: dto.productId,
+          buyerId,
+          quantity: dto.quantity,
+          totalPrice,
+          address: dto.address,
+          deliveryLat: dto.deliveryLat,
+          deliveryLng: dto.deliveryLng,
+        },
+        include: {
+          product: {
+            include: {
+              seller: {
+                select: { id: true, name: true, phone: true },
               },
             },
           },
-        });
+        },
+      });
 
-        // Optimistic Locking — race condition prevent
-        const stockUpdate = await tx.product.updateMany({
-          where: {
-            id: dto.productId,
-            quantity: { gte: dto.quantity },
-          },
-          data: {
-            quantity: { decrement: dto.quantity },
-            ...(remainingQuantity <= 0 && { status: 'SOLD' }),
-          },
-        });
+      const stockUpdate = await tx.product.updateMany({
+        where: {
+          id: dto.productId,
+          quantity: { gte: dto.quantity },
+        },
+        data: {
+          quantity: { decrement: dto.quantity },
+          ...(remainingQuantity <= 0 && { status: 'SOLD' }),
+        },
+      });
 
-        if (stockUpdate.count === 0) {
-          throw new BadRequestException(
-            'Stock unavailable at this moment, please try again',
-          );
-        }
+      if (stockUpdate.count === 0) {
+        throw new BadRequestException(
+          'Stock unavailable at this moment, please try again',
+        );
+      }
 
-        return newOrder;
-      },
-    );
+      return newOrder;
+    });
 
     return { success: true, data: order };
   }
@@ -141,11 +141,18 @@ export class OrderService {
       throw new ForbiddenException('Only seller can update order status');
 
     const validTransitions: Record<string, string[]> = {
-      PENDING: ['CONFIRMED', 'CANCELLED'],
-      CONFIRMED: ['SHIPPED'],
-      SHIPPED: ['DELIVERED'],
-      DELIVERED: [],
+      PAYMENT_PENDING: ['PAYMENT_CONFIRMED', 'CANCELLED'],
+      PAYMENT_CONFIRMED: ['SELLER_CONFIRMED', 'SELLER_REJECTED'],
+      SELLER_CONFIRMED: ['PROCESSING'],
+      SELLER_REJECTED: ['REFUNDED'],
+      PROCESSING: ['SHIPPED'],
+      SHIPPED: ['OUT_FOR_DELIVERY'],
+      OUT_FOR_DELIVERY: ['DELIVERED'],
+      DELIVERED: ['COMPLETED', 'DISPUTED'],
+      COMPLETED: [],
       CANCELLED: [],
+      DISPUTED: ['RESOLVED' as any, 'REFUNDED'],
+      REFUNDED: [],
     };
 
     const allowed = validTransitions[order.status] ?? [];
@@ -169,27 +176,27 @@ export class OrderService {
     if (!order) throw new NotFoundException('Order not found');
     if (order.buyerId !== buyerId)
       throw new ForbiddenException('Access denied');
-    if (order.status !== 'PENDING')
-      throw new BadRequestException('Only pending orders can be cancelled');
+    if (order.status !== 'PAYMENT_PENDING')
+      throw new BadRequestException(
+        'Only orders pending payment can be cancelled',
+      );
 
-    const updated = await this.prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const cancelledOrder = await tx.order.update({
-          where: { id },
-          data: { status: 'CANCELLED' },
-        });
+    const updated = await this.prisma.$transaction(async (tx: any) => {
+      const cancelledOrder = await tx.order.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
 
-        await tx.product.update({
-          where: { id: order.productId },
-          data: {
-            quantity: { increment: order.quantity },
-            status: 'ACTIVE',
-          },
-        });
+      await tx.product.update({
+        where: { id: order.productId },
+        data: {
+          quantity: { increment: order.quantity },
+          status: 'ACTIVE',
+        },
+      });
 
-        return cancelledOrder;
-      },
-    );
+      return cancelledOrder;
+    });
 
     return { success: true, data: updated };
   }
