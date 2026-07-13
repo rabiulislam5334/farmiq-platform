@@ -6,10 +6,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto';
+import { InjectQueue } from '@nestjs/bull';
+import * as Bull from 'bull';
 
 @Injectable()
 export class OrderService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @InjectQueue('order') private orderQueue: Bull.Queue,
+  ) {}
 
   async create(buyerId: string, dto: CreateOrderDto) {
     const product = await this.prisma.product.findUnique({
@@ -80,6 +85,17 @@ export class OrderService {
 
       return newOrder;
     });
+
+    // 24 ঘণ্টা পর auto-cancel job schedule করো
+    await this.orderQueue.add(
+      'auto-cancel',
+      { orderId: order.id },
+      {
+        delay: 24 * 60 * 60 * 1000, // 24 hours
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+      },
+    );
 
     return { success: true, data: order };
   }

@@ -10,7 +10,7 @@ import { OrderModule } from './order/order.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { ReviewModule } from './review/review.module';
 import { PaymentModule } from './payment/payment.module';
-
+import { QueueModule } from './queue/queue.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -24,6 +24,7 @@ import { PaymentModule } from './payment/payment.module';
     WishlistModule,
     ReviewModule,
     PaymentModule,
+    QueueModule,
   ],
 })
 export class AppModule {}
