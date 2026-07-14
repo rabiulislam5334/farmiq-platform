@@ -6,13 +6,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InitiatePaymentDto, PaymentMethod } from './dto/payment.dto';
+import { InventoryService } from '../inventory/inventory.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const SSLCommerzPayment = require('sslcommerz-lts');
 
 @Injectable()
 export class PaymentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private inventoryService: InventoryService,
+  ) {}
 
   async initiate(userId: string, dto: InitiatePaymentDto) {
     const order = await this.prisma.order.findUnique({
@@ -50,6 +54,10 @@ export class PaymentService {
           transactionId,
         },
       });
+
+      // COD নিশ্চিত হলে stock স্থায়ীভাবে DB-তে decrement হয়েই আছে,
+      // তাই আর Redis reservation ধরে রাখার দরকার নেই
+      await this.inventoryService.releaseStock(order.productId, order.id);
 
       return {
         success: true,
@@ -162,6 +170,12 @@ export class PaymentService {
       );
     }
 
+    // productId দরকার Redis reservation release করার জন্য
+    const order = await this.prisma.order.findUnique({
+      where: { id: payment.orderId },
+      select: { productId: true },
+    });
+
     // Payment + Order update
     await this.prisma.$transaction(async (tx: any) => {
       await tx.paymentTransaction.update({
@@ -177,6 +191,14 @@ export class PaymentService {
       });
     });
 
+    // Payment confirm হয়ে গেলে Redis reservation আর দরকার নেই
+    if (order) {
+      await this.inventoryService.releaseStock(
+        order.productId,
+        payment.orderId,
+      );
+    }
+
     return { success: true, message: 'Payment successful' };
   }
 
@@ -190,6 +212,10 @@ export class PaymentService {
       where: { id: payment.id },
       data: { status: 'FAILED' },
     });
+
+    // এখানে releaseStock call করা হচ্ছে না ইচ্ছাকৃতভাবে —
+    // order এখনো PAYMENT_PENDING, buyer আবার payment retry করতে পারবে,
+    // তাই reservation ততক্ষণ ধরে রাখা উচিত (TTL/cancel/auto-cancel যেভাবেই শেষ হোক)
 
     return { success: false, message: 'Payment failed' };
   }

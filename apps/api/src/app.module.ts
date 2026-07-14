@@ -11,6 +11,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
 import { ReviewModule } from './review/review.module';
 import { PaymentModule } from './payment/payment.module';
 import { QueueModule } from './queue/queue.module';
+import { InventoryModule } from './inventory/inventory.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -25,6 +26,7 @@ import { QueueModule } from './queue/queue.module';
     ReviewModule,
     PaymentModule,
     QueueModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}

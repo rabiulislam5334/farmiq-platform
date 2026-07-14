@@ -2,12 +2,16 @@ import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import * as Bull from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Processor('order')
 export class OrderProcessor {
   private readonly logger = new Logger(OrderProcessor.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private inventoryService: InventoryService,
+  ) {}
 
   @Process('auto-cancel')
   async handleAutoCancel(job: Bull.Job<{ orderId: string }>) {
@@ -47,6 +51,10 @@ export class OrderProcessor {
           },
         });
       });
+
+      // Redis reservation ছেড়ে দাও, নাহলে ১৫ মিনিট পর TTL দিয়ে auto-release হবে
+      // কিন্তু এখানে explicit release করলে সাথে সাথেই স্লট খালি হয়ে যায়
+      await this.inventoryService.releaseStock(order.productId, orderId);
 
       this.logger.log(`Order ${orderId} auto-cancelled successfully`);
     } catch (error) {

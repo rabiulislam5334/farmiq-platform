@@ -4,16 +4,19 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto';
 import { InjectQueue } from '@nestjs/bull';
 import * as Bull from 'bull';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('order') private orderQueue: Bull.Queue,
+    private inventoryService: InventoryService,
   ) {}
 
   async create(buyerId: string, dto: CreateOrderDto) {
@@ -44,60 +47,83 @@ export class OrderService {
     const totalPrice = product.price * dto.quantity;
     const remainingQuantity = product.quantity - dto.quantity;
 
-    const order = await this.prisma.$transaction(async (tx: any) => {
-      const newOrder = await tx.order.create({
-        data: {
-          productId: dto.productId,
-          buyerId,
-          quantity: dto.quantity,
-          totalPrice,
-          address: dto.address,
-          deliveryLat: dto.deliveryLat,
-          deliveryLng: dto.deliveryLng,
-        },
-        include: {
-          product: {
-            include: {
-              seller: {
-                select: { id: true, name: true, phone: true },
+    // Order id আগেই generate করি, যাতে DB transaction-এর আগে Redis-এ reserve করা যায়
+    const orderId = randomUUID();
+
+    const reserved = await this.inventoryService.reserveStock(
+      dto.productId,
+      orderId,
+      dto.quantity,
+      product.quantity,
+    );
+
+    if (!reserved) {
+      throw new BadRequestException(
+        'Stock is currently reserved by other buyers, please try again shortly',
+      );
+    }
+
+    try {
+      const order = await this.prisma.$transaction(async (tx: any) => {
+        const newOrder = await tx.order.create({
+          data: {
+            id: orderId, // pre-generated id ব্যবহার করা হচ্ছে
+            productId: dto.productId,
+            buyerId,
+            quantity: dto.quantity,
+            totalPrice,
+            address: dto.address,
+            deliveryLat: dto.deliveryLat,
+            deliveryLng: dto.deliveryLng,
+          },
+          include: {
+            product: {
+              include: {
+                seller: {
+                  select: { id: true, name: true, phone: true },
+                },
               },
             },
           },
-        },
+        });
+
+        const stockUpdate = await tx.product.updateMany({
+          where: {
+            id: dto.productId,
+            quantity: { gte: dto.quantity },
+          },
+          data: {
+            quantity: { decrement: dto.quantity },
+            ...(remainingQuantity <= 0 && { status: 'SOLD' }),
+          },
+        });
+
+        if (stockUpdate.count === 0) {
+          throw new BadRequestException(
+            'Stock unavailable at this moment, please try again',
+          );
+        }
+
+        return newOrder;
       });
 
-      const stockUpdate = await tx.product.updateMany({
-        where: {
-          id: dto.productId,
-          quantity: { gte: dto.quantity },
+      // 24 ঘণ্টা পর auto-cancel job schedule করো
+      await this.orderQueue.add(
+        'auto-cancel',
+        { orderId: order.id },
+        {
+          delay: 24 * 60 * 60 * 1000, // 24 hours
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
         },
-        data: {
-          quantity: { decrement: dto.quantity },
-          ...(remainingQuantity <= 0 && { status: 'SOLD' }),
-        },
-      });
+      );
 
-      if (stockUpdate.count === 0) {
-        throw new BadRequestException(
-          'Stock unavailable at this moment, please try again',
-        );
-      }
-
-      return newOrder;
-    });
-
-    // 24 ঘণ্টা পর auto-cancel job schedule করো
-    await this.orderQueue.add(
-      'auto-cancel',
-      { orderId: order.id },
-      {
-        delay: 24 * 60 * 60 * 1000, // 24 hours
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
-      },
-    );
-
-    return { success: true, data: order };
+      return { success: true, data: order };
+    } catch (err) {
+      // DB transaction fail হলে Redis reservation ছেড়ে দাও
+      await this.inventoryService.releaseStock(dto.productId, orderId);
+      throw err;
+    }
   }
 
   async findMyOrders(buyerId: string) {
@@ -213,6 +239,9 @@ export class OrderService {
 
       return cancelledOrder;
     });
+
+    // Manually cancel হলেও Redis reservation ছেড়ে দিতে হবে
+    await this.inventoryService.releaseStock(order.productId, id);
 
     return { success: true, data: updated };
   }
