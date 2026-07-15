@@ -55,7 +55,7 @@ export class PaymentService {
         },
       });
 
-      // COD নিশ্চিত হলে stock স্থায়ীভাবে DB-তে decrement হয়েই আছে,
+      // COD নিশ্চিত হলে stock স্থায়ীভাবে DB-তে decrement হয়েই আছে (order create সময়),
       // তাই আর Redis reservation ধরে রাখার দরকার নেই
       await this.inventoryService.releaseStock(order.productId, order.id);
 
@@ -138,6 +138,11 @@ export class PaymentService {
     });
     if (!payment) throw new NotFoundException('Payment not found');
 
+    // Duplicate IPN call protection (SSLCommerz কখনো কখনো একই callback একাধিকবার পাঠাতে পারে)
+    if (payment.status === 'SUCCESS') {
+      return { success: true, message: 'Already processed' };
+    }
+
     const sslcz = new SSLCommerzPayment(
       process.env.SSLCOMMERZ_STORE_ID,
       process.env.SSLCOMMERZ_STORE_PASSWORD,
@@ -176,7 +181,8 @@ export class PaymentService {
       select: { productId: true },
     });
 
-    // Payment + Order update
+    // Payment + Order update — এখানে raw transaction client (tx) ব্যবহার হচ্ছে,
+    // তাই আসল Prisma model নাম "paymentTransaction" ব্যবহার করতে হবে (PrismaService-এর wrapper না)
     await this.prisma.$transaction(async (tx: any) => {
       await tx.paymentTransaction.update({
         where: { id: payment.id },
