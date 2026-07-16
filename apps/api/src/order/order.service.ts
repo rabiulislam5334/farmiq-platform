@@ -193,7 +193,7 @@ export class OrderService {
       DELIVERED: ['COMPLETED', 'DISPUTED'],
       COMPLETED: [],
       CANCELLED: [],
-      DISPUTED: ['RESOLVED' as any, 'REFUNDED'],
+      DISPUTED: ['COMPLETED', 'REFUNDED'],
       REFUNDED: [],
     };
 

@@ -35,7 +35,7 @@ export class ChatService {
   }
 
   async getMyRooms(userId: string) {
-    return this.prisma.chatRoom.findMany({
+    return await this.prisma.chatRoom.findMany({
       where: {
         OR: [{ buyerId: userId }, { sellerId: userId }],
       },

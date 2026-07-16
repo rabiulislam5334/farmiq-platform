@@ -13,6 +13,7 @@ import { PaymentModule } from './payment/payment.module';
 import { QueueModule } from './queue/queue.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { NotificationModule } from './notification/notification.module';
+import { ChatModule } from './chat/chat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -29,6 +30,7 @@ import { NotificationModule } from './notification/notification.module';
     QueueModule,
     InventoryModule,
     NotificationModule,
+    ChatModule,
   ],
 })
 export class AppModule {}
