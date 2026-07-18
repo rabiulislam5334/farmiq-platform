@@ -14,9 +14,23 @@ import { QueueModule } from './queue/queue.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { NotificationModule } from './notification/notification.module';
 import { ChatModule } from './chat/chat.module';
+import { DisputeModule } from './dispute/dispute.module';
+import { AdminModule } from './admin/admin.module';
+import { envValidationSchema } from './config/env.validation';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // ৬০ সেকেন্ড window
+        limit: 100, // প্রতি IP-তে ৬০ সেকেন্ডে সর্বোচ্চ ১০০ request (default, সব endpoint-এর জন্য)
+      },
+    ]),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -31,6 +45,14 @@ import { ChatModule } from './chat/chat.module';
     InventoryModule,
     NotificationModule,
     ChatModule,
+    DisputeModule,
+    AdminModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
