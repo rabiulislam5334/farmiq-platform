@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -25,15 +26,31 @@ export class OrderController {
   }
 
   @Get('my-orders')
-  findMyOrders(@Req() req: Request) {
+  findMyOrders(
+    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const buyerId = (req['user'] as { sub: string }).sub;
-    return this.orderService.findMyOrders(buyerId);
+    return this.orderService.findMyOrders(
+      buyerId,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 20,
+    );
   }
 
   @Get('seller-orders')
-  findSellerOrders(@Req() req: Request) {
+  findSellerOrders(
+    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const sellerId = (req['user'] as { sub: string }).sub;
-    return this.orderService.findSellerOrders(sellerId);
+    return this.orderService.findSellerOrders(
+      sellerId,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 20,
+    );
   }
 
   @Get(':id')

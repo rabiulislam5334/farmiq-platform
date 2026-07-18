@@ -126,27 +126,49 @@ export class OrderService {
     }
   }
 
-  async findMyOrders(buyerId: string) {
-    const orders = await this.prisma.order.findMany({
-      where: { buyerId },
-      include: {
-        product: { include: { category: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { success: true, data: orders };
+  async findMyOrders(buyerId: string, page = 1, limit = 20) {
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { buyerId },
+        include: {
+          product: { include: { category: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.order.count({ where: { buyerId } }),
+    ]);
+
+    return {
+      success: true,
+      data: orders,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
-  async findSellerOrders(sellerId: string) {
-    const orders = await this.prisma.order.findMany({
-      where: { product: { sellerId } },
-      include: {
-        product: true,
-        buyer: { select: { id: true, name: true, phone: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { success: true, data: orders };
+  async findSellerOrders(sellerId: string, page = 1, limit = 20) {
+    const where = { product: { sellerId } };
+
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          product: true,
+          buyer: { select: { id: true, name: true, phone: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: orders,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string, userId: string) {

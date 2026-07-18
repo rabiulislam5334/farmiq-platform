@@ -14,8 +14,6 @@ export class ResponseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((result: unknown) => {
-        // Service already { success, data } বা { success, message } রিটার্ন করলে,
-        // সেটা ভেঙে না ফেলে ভেতরের data-টাই wrap করি (double-nesting এড়াতে)
         const isAlreadyWrapped =
           result &&
           typeof result === 'object' &&
@@ -29,11 +27,16 @@ export class ResponseInterceptor implements NestInterceptor {
           ? (result as Record<string, unknown>).message
           : undefined;
 
+        const meta = isAlreadyWrapped
+          ? (result as Record<string, unknown>).meta
+          : undefined;
+
         return {
           success: true,
           statusCode: response.statusCode,
           data: payload,
           ...(message !== undefined && { message }),
+          ...(meta !== undefined && { meta }),
           timestamp: new Date().toISOString(),
         };
       }),

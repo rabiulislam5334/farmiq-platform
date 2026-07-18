@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -19,11 +20,33 @@ import { AdminModule } from './admin/admin.module';
 import { envValidationSchema } from './config/env.validation';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { HealthModule } from './health/health.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: envValidationSchema,
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        transport:
+          process.env.NODE_ENV === 'production'
+            ? undefined
+            : {
+                target: require.resolve('pino-pretty'),
+                options: {
+                  colorize: true,
+                  singleLine: true,
+                  translateTime: 'HH:MM:ss',
+                },
+              },
+        redact: ['req.headers.authorization', 'req.headers.cookie'],
+        autoLogging: {
+          ignore: (req) => req.url === '/health',
+        },
+      },
     }),
     ThrottlerModule.forRoot([
       {
@@ -47,6 +70,7 @@ import { APP_GUARD } from '@nestjs/core';
     ChatModule,
     DisputeModule,
     AdminModule,
+    HealthModule,
   ],
   providers: [
     {

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import { ProductQueryDto } from './dto/product-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import type { Request } from 'express';
 
@@ -27,18 +28,23 @@ export class ProductController {
   }
 
   @Get()
-  findAll(
-    @Query('categoryId') categoryId?: string,
-    @Query('location') location?: string,
-  ) {
-    return this.productService.findAll({ categoryId, location });
+  findAll(@Query() query: ProductQueryDto) {
+    return this.productService.findAll(query);
   }
 
   @Get('my-products')
   @UseGuards(JwtAuthGuard)
-  findMyProducts(@Req() req: Request) {
+  findMyProducts(
+    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const sellerId = (req['user'] as { sub: string }).sub;
-    return this.productService.findMyProducts(sellerId);
+    return this.productService.findMyProducts(
+      sellerId,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 20,
+    );
   }
 
   @Get(':id')
