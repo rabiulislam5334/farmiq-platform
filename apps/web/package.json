@@ -11,18 +11,43 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@repo/ui": "workspace:*",
+    "@sentry/nextjs": "^10.67.0",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-query-devtools": "^5.101.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.42.2",
+    "instantsearch.js": "^4.108.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.26.0",
     "next": "16.2.0",
+    "next-intl": "^4.13.4",
+    "next-pwa": "^5.6.0",
+    "next-themes": "^0.4.6",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.82.0",
+    "react-instantsearch": "^7.41.0",
+    "react-leaflet": "^5.0.0",
+    "recharts": "^3.10.0",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "eslint": "^9.39.1",
+    "postcss": "^8.5.22",
+    "tailwindcss": "^4.3.3",
     "typescript": "5.9.2"
   }
 }

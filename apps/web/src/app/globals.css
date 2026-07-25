@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+  --font-bangla: var(--font-hind-siliguri);
+}
+
+:root {
+  --background: 40 33% 96%; /* #FAF7F0 */
+  --surface: 0 0% 100%; /* #FFFFFF */
+  --foreground: 100 8% 11%; /* #1A2118 */
+  --muted-foreground: 100 8% 37%; /* #5C6B58 */
+  --primary: 140 36% 27%; /* #2D5F3E */
+  --primary-hover: 140 40% 21%; /* #234A31 */
+  --accent: 27 55% 51%; /* #C77D3E */
+  --success: 133 36% 35%; /* #3A8049 */
+  --warning: 40 47% 51%; /* #C99A3D */
+  --danger: 6 47% 47%; /* #B84A3E */
+  --border: 40 27% 87%; /* #E3DDD0 */
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 96 12% 8%; /* #141810 */
+  --surface: 96 10% 12%; /* #1E241B */
+  --foreground: 48 33% 92%; /* #F2EFE6 */
+  --muted-foreground: 96 10% 62%; /* #9BA893 */
+  --primary: 137 30% 41%; /* #4A8B5C */
+  --primary-hover: 133 30% 47%; /* #5C9E6E */
+  --accent: 27 55% 63%; /* #D89563 */
+  --success: 133 30% 51%; /* #5FAE71 */
+  --warning: 40 47% 63%; /* #DBB05A */
+  --danger: 8 55% 61%; /* #D66657 */
+  --border: 96 12% 15%; /* #2E362A */
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
