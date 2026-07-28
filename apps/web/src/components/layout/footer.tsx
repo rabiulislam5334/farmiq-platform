@@ -1,177 +1,105 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { Menu, Moon, Sun, Languages, Search, Sprout } from "lucide-react";
+import { Sprout } from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
 import { dictionary } from "@/lib/dictionary";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
-export function Header() {
-  const { locale, setLocale } = useUIStore();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  const [mobileOpen, setMobileOpen] = React.useState(false);
-
-  // avoid hydration mismatch for theme icon
-  React.useEffect(() => setMounted(true), []);
-
+export function Footer() {
+  const { locale } = useUIStore();
   const t = dictionary[locale];
 
-  const navLinks = [
-    { href: "/", label: t.nav.home },
-    { href: "/products", label: t.nav.products },
-    { href: "/sell", label: t.nav.sell },
-    { href: "/ai", label: t.nav.ai },
-    { href: "/about", label: t.nav.about },
-  ];
+  const year = new Date().getFullYear();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm">
-      <div className="mx-auto flex h-[76px] max-w-[1200px] items-center justify-between px-6 lg:px-8">
-        {/* Logo */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 font-bangla text-xl font-bold text-primary"
-        >
-          <Sprout className="h-7 w-7" strokeWidth={2.2} />
-          FarmIQ
-        </Link>
-
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-8 md:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-[15px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Right actions */}
-        <div className="flex items-center gap-2">
-          {/* Search - desktop only, icon-triggered could expand; kept simple here */}
-          <div className="relative hidden lg:block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={t.header.search}
-              className="w-[220px] rounded-full bg-surface pl-9 font-bangla"
-            />
+    <footer className="mt-6 bg-[#1A2118] pt-14 pb-7 text-[#C8CFC4]">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-8 border-b border-white/10 pb-9 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
+            <div className="mb-2.5 flex items-center gap-2 text-xl font-bold text-white">
+              <Sprout className="h-6 w-6" />
+              FarmIQ
+            </div>
+            <p className="max-w-[260px] font-bangla text-[13.5px] leading-relaxed text-[#9BA893]">
+              {t.footer.tagline}
+            </p>
           </div>
 
-          {/* Language toggle */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Change language"
-                className="rounded-full"
+          <div>
+            <h4 className="mb-3.5 text-sm text-white">{t.footer.platform}</h4>
+            <div className="flex flex-col gap-2.5">
+              <Link
+                href="/products"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
               >
-                <Languages className="h-[18px] w-[18px]" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => setLocale("bn")}
-                className={locale === "bn" ? "font-semibold text-primary" : ""}
+                {t.nav.products}
+              </Link>
+              <Link
+                href="/sell"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
               >
-                বাংলা
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setLocale("en")}
-                className={locale === "en" ? "font-semibold text-primary" : ""}
+                {t.nav.sell}
+              </Link>
+              <Link
+                href="/ai"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
               >
-                English
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Dark mode toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Toggle theme"
-            className="rounded-full"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {mounted && theme === "dark" ? (
-              <Sun className="h-[18px] w-[18px]" />
-            ) : (
-              <Moon className="h-[18px] w-[18px]" />
-            )}
-          </Button>
-
-          {/* Auth buttons - desktop */}
-          <div className="hidden items-center gap-2 md:flex">
-            <Button variant="outline" asChild>
-              <Link href="/login">{t.header.login}</Link>
-            </Button>
-            <Button
-              className="bg-primary text-white hover:bg-primary-hover"
-              asChild
-            >
-              <Link href="/register">{t.header.register}</Link>
-            </Button>
+                {t.nav.ai}
+              </Link>
+            </div>
           </div>
 
-          {/* Mobile menu trigger */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] font-bangla">
-              <SheetHeader>
-                <SheetTitle className="text-primary">FarmIQ</SheetTitle>
-              </SheetHeader>
-              <nav className="mt-6 flex flex-col gap-1">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="rounded-lg px-3 py-2.5 text-[15px] font-medium text-foreground hover:bg-primary/5"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-              <div className="mt-6 flex flex-col gap-2 border-t border-border pt-6">
-                <Button variant="outline" asChild>
-                  <Link href="/login">{t.header.login}</Link>
-                </Button>
-                <Button
-                  className="bg-primary text-white hover:bg-primary-hover"
-                  asChild
-                >
-                  <Link href="/register">{t.header.register}</Link>
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <div>
+            <h4 className="mb-3.5 text-sm text-white">{t.footer.support}</h4>
+            <div className="flex flex-col gap-2.5">
+              <Link
+                href="/contact"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
+              >
+                {t.footer.contact}
+              </Link>
+              <Link
+                href="/complaint"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
+              >
+                {t.footer.complaint}
+              </Link>
+              <Link
+                href="/faq"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
+              >
+                {t.footer.faq}
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3.5 text-sm text-white">{t.footer.legal}</h4>
+            <div className="flex flex-col gap-2.5">
+              <Link
+                href="/terms"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
+              >
+                {t.footer.terms}
+              </Link>
+              <Link
+                href="/privacy"
+                className="font-bangla text-[13.5px] text-[#9BA893] hover:text-white"
+              >
+                {t.footer.privacy}
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 pt-6 text-[12.5px] text-[#77836F] sm:flex-row sm:justify-between">
+          <div className="font-bangla">
+            © {year} FarmIQ। {t.footer.rights}
+          </div>
+          <div className="font-bangla">{t.footer.madeFor} 🌾</div>
         </div>
       </div>
-    </header>
+    </footer>
   );
 }
