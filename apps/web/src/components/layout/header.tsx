@@ -80,15 +80,17 @@ export function Header() {
 
           {/* Language toggle */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Change language"
-                className="rounded-full"
-              >
-                <Languages className="h-[18px] w-[18px]" />
-              </Button>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Change language"
+                  className="rounded-full"
+                />
+              }
+            >
+              <Languages className="h-[18px] w-[18px]" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
@@ -123,23 +125,25 @@ export function Header() {
 
           {/* Auth buttons - desktop */}
           <div className="hidden items-center gap-2 md:flex">
-            <Button variant="outline" asChild>
-              <Link href="/login">{t.header.login}</Link>
+            <Button variant="outline" render={<Link href="/login" />}>
+              {t.header.login}
             </Button>
             <Button
               className="bg-primary text-white hover:bg-primary-hover"
-              asChild
+              render={<Link href="/register" />}
             >
-              <Link href="/register">{t.header.register}</Link>
+              {t.header.register}
             </Button>
           </div>
 
           {/* Mobile menu trigger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
+            <SheetTrigger
+              render={
+                <Button variant="ghost" size="icon" className="md:hidden" />
+              }
+            >
+              <Menu className="h-5 w-5" />
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] font-bangla">
               <SheetHeader>
@@ -158,14 +162,14 @@ export function Header() {
                 ))}
               </nav>
               <div className="mt-6 flex flex-col gap-2 border-t border-border pt-6">
-                <Button variant="outline" asChild>
-                  <Link href="/login">{t.header.login}</Link>
+                <Button variant="outline" render={<Link href="/login" />}>
+                  {t.header.login}
                 </Button>
                 <Button
                   className="bg-primary text-white hover:bg-primary-hover"
-                  asChild
+                  render={<Link href="/register" />}
                 >
-                  <Link href="/register">{t.header.register}</Link>
+                  {t.header.register}
                 </Button>
               </div>
             </SheetContent>

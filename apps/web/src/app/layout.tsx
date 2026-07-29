@@ -31,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="bn" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${inter.variable} ${hindSiliguri.variable} font-bangla antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
