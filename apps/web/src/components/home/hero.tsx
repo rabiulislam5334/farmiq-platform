@@ -125,7 +125,7 @@ export function Hero() {
           {trustPoints.map((point) => (
             <div
               key={point}
-              className="flex items-center gap-2 text-[13.5px] font-medium text-white/90"
+              className="flex items-center gap-2 rounded-full bg-black/25 px-3 py-1.5 text-[13.5px] font-medium text-white backdrop-blur-sm"
             >
               <CheckCircle2 className="h-[18px] w-[18px] text-success" />
               <span className="font-bangla">{point}</span>
