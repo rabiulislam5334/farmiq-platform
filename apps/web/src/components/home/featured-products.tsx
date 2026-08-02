@@ -10,6 +10,10 @@ import {
   Flame,
   CircleDot,
   Plus,
+  Apple,
+  Citrus,
+  Carrot,
+  Bean,
 } from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
@@ -59,11 +63,55 @@ const products = [
     bg: "from-[#E2ECE0] to-[#C7DCC3]",
     fresh: true,
   },
+  {
+    id: "5",
+    nameBn: "লাল টমেটো",
+    nameEn: "Red Tomato",
+    locationBn: "রাজশাহী",
+    locationEn: "Rajshahi",
+    price: 50,
+    icon: Apple,
+    bg: "from-[#FCE4E4] to-[#F8B4B4]",
+    fresh: true,
+  },
+  {
+    id: "6",
+    nameBn: "মিষ্টি আম (হিমসাগর)",
+    nameEn: "Himsagar Mango",
+    locationBn: "চাঁপাই নবাবগঞ্জ",
+    locationEn: "Chapainawabganj",
+    price: 120,
+    icon: Citrus,
+    bg: "from-[#FFF3C4] to-[#FCE181]",
+    fresh: true,
+  },
+  {
+    id: "7",
+    nameBn: "দেশি মসুর ডাল",
+    nameEn: "Local Red Lentil",
+    locationBn: "কুষ্টিয়া",
+    locationEn: "Kushtia",
+    price: 135,
+    icon: Bean,
+    bg: "from-[#FBE3D5] to-[#F5C2A5]",
+    fresh: true,
+  },
+  {
+    id: "8",
+    nameBn: "তাজা গাজর",
+    nameEn: "Fresh Carrot",
+    locationBn: "যশোর",
+    locationEn: "Jeshore",
+    price: 60,
+    icon: Carrot,
+    bg: "from-[#FFE2D1] to-[#FBBF9B]",
+    fresh: true,
+  },
 ];
 
 const container: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.06 } },
 };
 
 const card: Variants = {
@@ -71,7 +119,7 @@ const card: Variants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -106,11 +154,12 @@ export function FeaturedProducts() {
           </Link>
         </motion.div>
 
+        {/* 2 Rows Grid: 4 columns on desktop (total 8 items) */}
         <motion.div
           variants={container}
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={{ once: true, amount: 0.15 }}
           className="grid grid-cols-2 gap-5 lg:grid-cols-4"
         >
           {products.map((p) => (
@@ -125,18 +174,18 @@ export function FeaturedProducts() {
                 className={`relative flex h-[150px] items-center justify-center bg-gradient-to-br ${p.bg}`}
               >
                 {p.fresh && (
-                  <span className="absolute left-2.5 top-2.5 rounded-full bg-success px-2.5 py-1 text-[11px] font-bold text-white">
-                    {locale === "bn" ? "টাজা" : "FRESH"}
+                  <span className="absolute left-2.5 top-2.5 rounded-full bg-success px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+                    {locale === "bn" ? "তাজা" : "FRESH"}
                   </span>
                 )}
                 <motion.button
                   whileTap={{ scale: 0.85 }}
-                  className="absolute right-2.5 top-2.5 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/90"
+                  className="absolute right-2.5 top-2.5 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/90 shadow-sm transition-colors hover:bg-white"
                 >
-                  <Heart className="h-[15px] w-[15px] text-foreground" />
+                  <Heart className="h-[15px] w-[15px] text-foreground hover:text-red-500" />
                 </motion.button>
                 <p.icon
-                  className="h-11 w-11 text-foreground/70"
+                  className="h-11 w-11 text-foreground/70 transition-transform duration-300 group-hover:scale-110"
                   strokeWidth={1.8}
                 />
               </div>
@@ -158,7 +207,7 @@ export function FeaturedProducts() {
                   </div>
                   <motion.button
                     whileTap={{ scale: 0.9 }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-white"
                   >
                     <Plus className="h-4 w-4" />
                   </motion.button>

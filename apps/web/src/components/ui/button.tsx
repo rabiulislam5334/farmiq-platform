@@ -50,12 +50,13 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  children,
   ...props
 }: ButtonProps) {
   const classes = cn(buttonVariants({ variant, size, className }));
 
-  if (asChild && React.isValidElement(props.children)) {
-    const child = props.children as React.ReactElement<{ className?: string }>;
+  if (asChild && React.isValidElement(children)) {
+    const child = children as React.ReactElement<{ className?: string }>;
     return React.cloneElement(child, {
       className: cn(classes, child.props.className),
       "data-slot": "button",
@@ -63,7 +64,11 @@ function Button({
     } as React.HTMLAttributes<HTMLElement>);
   }
 
-  return <button data-slot="button" className={classes} {...props} />;
+  return (
+    <button data-slot="button" className={classes} {...props}>
+      {children}
+    </button>
+  );
 }
 
 export { Button, buttonVariants, type ButtonProps };

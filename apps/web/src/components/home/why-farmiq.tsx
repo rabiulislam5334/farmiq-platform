@@ -138,9 +138,13 @@ export function WhyFarmIQ() {
                 key={i}
                 variants={item}
                 whileHover={{ y: -5 }}
+                whileTap={{ scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                className="group relative rounded-2xl border border-border bg-background p-7 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
+                className="group relative overflow-hidden rounded-2xl border border-border bg-background p-7 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
               >
+                {/* Green Bottom Border Line on Hover */}
+                <span className="absolute bottom-0 left-0 h-[3px] w-0 bg-primary transition-all duration-300 ease-out group-hover:w-full" />
+
                 {/* Icon Wrapper */}
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-md group-hover:shadow-primary/20">
                   <Icon

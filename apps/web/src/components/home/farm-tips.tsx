@@ -3,13 +3,17 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 
+import { useUIStore } from "@/store/ui-store";
+
 interface Tip {
   image: string;
-  title: string;
-  subtitle: string;
-  description: string;
+  title: { bn: string; en: string };
+  subtitle: { bn: string; en: string };
+  description: { bn: string; en: string };
   link?: string;
 }
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 function GreenArrowButton({ link = "#" }: { link?: string }) {
   return (
@@ -36,67 +40,90 @@ function GreenArrowButton({ link = "#" }: { link?: string }) {
   );
 }
 
+const textVariants = {
+  collapsed: { transition: { staggerChildren: 0.04 } },
+  expanded: { transition: { staggerChildren: 0.06, delayChildren: 0.08 } },
+};
+
+const lineVariants = {
+  collapsed: { opacity: 0.85, y: 0 },
+  expanded: { opacity: 1, y: 0 },
+};
+
+const detailVariants = {
+  collapsed: { opacity: 0, height: 0, y: 8 },
+  expanded: { opacity: 1, height: "auto", y: 0 },
+};
+
 function TipCard({
   tip,
   index,
   hoveredIndex,
   setHoveredIndex,
+  locale,
 }: {
   tip: Tip;
   index: number;
   hoveredIndex: number | null;
   setHoveredIndex: (index: number | null) => void;
+  locale: "bn" | "en";
 }) {
   const isActive = hoveredIndex === index;
 
   return (
-    <div
-      className={`relative h-[450px] w-full cursor-pointer overflow-hidden rounded-lg shadow-xl transition-all duration-700 ease-[cubic-bezier(0.22,0.61,0.36,1)] ${
+    <motion.div
+      layout
+      transition={{ layout: { duration: 0.6, ease: EASE } }}
+      className={`relative h-[450px] w-full cursor-pointer overflow-hidden rounded-lg shadow-xl ${
         isActive ? "lg:w-[40%]" : "lg:w-[15%]"
       }`}
       onMouseEnter={() => setHoveredIndex(index)}
-      onMouseLeave={() => setHoveredIndex(null)}
     >
       {/* Background image */}
-      <img
+      <motion.img
         src={tip.image}
-        alt={tip.title}
-        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-in-out ${
-          isActive ? "scale-110" : "scale-100"
-        }`}
+        alt={tip.title[locale]}
+        className="absolute inset-0 h-full w-full object-cover"
+        animate={{ scale: isActive ? 1.08 : 1 }}
+        transition={{ duration: 0.6, ease: EASE }}
       />
 
       {/* Overlay gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-      {/* Expanded content */}
-      <div
-        className={`absolute bottom-0 w-full p-6 text-white transition-all duration-[1000ms] ease-[cubic-bezier(0.22,0.61,0.36,1)] ${
-          isActive ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
-        style={{
-          willChange: "opacity, transform",
-          transitionDelay: isActive ? "150ms" : "0ms",
-        }}
+      {/* Text content */}
+      <motion.div
+        className="absolute bottom-0 w-full p-6 text-white"
+        initial={false}
+        animate={isActive ? "expanded" : "collapsed"}
+        variants={textVariants}
       >
-        <h4 className="mb-1 text-sm font-light text-accent">{tip.subtitle}</h4>
-        <h3 className="mb-2 text-xl font-bold leading-tight">{tip.title}</h3>
-        <p className="mb-4 text-xs leading-relaxed text-gray-200">
-          {tip.description}
-        </p>
-        <GreenArrowButton link={tip.link} />
-      </div>
-
-      {/* Collapsed title */}
-      <div
-        className={`absolute bottom-0 left-0 w-full p-6 text-white transition-opacity duration-500 ease-in-out ${
-          isActive ? "opacity-0" : "opacity-100"
-        }`}
-      >
-        <h4 className="mb-1 text-sm font-light text-accent">{tip.subtitle}</h4>
-        <h3 className="mb-2 text-xl font-bold leading-tight">{tip.title}</h3>
-      </div>
-    </div>
+        <motion.h4
+          variants={lineVariants}
+          transition={{ duration: 0.35, ease: EASE }}
+          className="mb-1 font-bangla text-sm font-light text-accent"
+        >
+          {tip.subtitle[locale]}
+        </motion.h4>
+        <motion.h3
+          variants={lineVariants}
+          transition={{ duration: 0.35, ease: EASE }}
+          className="mb-2 font-bangla text-xl font-bold leading-tight"
+        >
+          {tip.title[locale]}
+        </motion.h3>
+        <motion.div
+          variants={detailVariants}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="overflow-hidden"
+        >
+          <p className="mb-4 font-bangla text-xs leading-relaxed text-gray-200">
+            {tip.description[locale]}
+          </p>
+          <GreenArrowButton link={tip.link} />
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -104,46 +131,57 @@ const tipsData: Tip[] = [
   {
     image:
       "https://demo2.themelexus.com/agrile/wp-content/uploads/2024/11/project-2-1024x788.jpg",
-    title: "Soil Health First",
-    subtitle: "Eco and Agriculture",
-    description:
-      "Focus on natural fertilizers and crop rotation for better yield and sustained soil quality.",
+    title: { bn: "মাটির স্বাস্থ্য প্রথমে", en: "Soil Health First" },
+    subtitle: { bn: "পরিবেশ ও কৃষি", en: "Eco and Agriculture" },
+    description: {
+      bn: "ভালো ফলন ও দীর্ঘমেয়াদী মাটির গুণমানের জন্য প্রাকৃতিক সার ও ফসল আবর্তনের উপর জোর দিন।",
+      en: "Focus on natural fertilizers and crop rotation for better yield and sustained soil quality.",
+    },
   },
   {
     image:
       "https://demo2.themelexus.com/agrile/wp-content/uploads/2024/11/project-3-1024x788.jpg",
-    title: "Water Management",
-    subtitle: "Irrigation Strategies",
-    description:
-      "Implement drip irrigation systems to conserve water and ensure plants receive consistent moisture.",
+    title: { bn: "সেচ ব্যবস্থাপনা", en: "Water Management" },
+    subtitle: { bn: "সেচ কৌশল", en: "Irrigation Strategies" },
+    description: {
+      bn: "পানি সাশ্রয় করতে ড্রিপ ইরিগেশন ব্যবহার করুন, যাতে গাছ নিয়মিত পরিমাণে আর্দ্রতা পায়।",
+      en: "Implement drip irrigation systems to conserve water and ensure plants receive consistent moisture.",
+    },
   },
   {
     image:
       "https://demo2.themelexus.com/agrile/wp-content/uploads/2024/11/project-4-1024x788.jpg",
-    title: "Pest Control",
-    subtitle: "Natural Defenses",
-    description:
-      "Use integrated pest management (IPM) techniques with biological controls and natural deterrents.",
+    title: { bn: "পোকা দমন", en: "Pest Control" },
+    subtitle: { bn: "প্রাকৃতিক প্রতিরক্ষা", en: "Natural Defenses" },
+    description: {
+      bn: "জৈবিক নিয়ন্ত্রণ ও প্রাকৃতিক প্রতিরোধক ব্যবহার করে সমন্বিত পোকা দমন (IPM) পদ্ধতি অনুসরণ করুন।",
+      en: "Use integrated pest management (IPM) techniques with biological controls and natural deterrents.",
+    },
   },
   {
     image:
       "https://demo2.themelexus.com/agrile/wp-content/uploads/2024/11/project-9-1024x788.jpg",
-    title: "Tractor Maintenance",
-    subtitle: "Seasonal Checks",
-    description:
-      "Ensure machinery is serviced before planting and harvest to prevent costly downtime.",
+    title: { bn: "ট্রাক্টর রক্ষণাবেক্ষণ", en: "Tractor Maintenance" },
+    subtitle: { bn: "মৌসুমি পরীক্ষা", en: "Seasonal Checks" },
+    description: {
+      bn: "রোপণ ও ফসল কাটার আগে যন্ত্রপাতি সার্ভিসিং করান, যাতে অপ্রয়োজনীয় বিলম্ব এড়ানো যায়।",
+      en: "Ensure machinery is serviced before planting and harvest to prevent costly downtime.",
+    },
   },
   {
     image:
       "https://demo2.themelexus.com/agrile/wp-content/uploads/2024/11/project-1-1024x788.jpg",
-    title: "Harvest Timing",
-    subtitle: "Optimal Freshness",
-    description:
-      "Harvest leafy greens early in the morning for maximum freshness and nutritional value.",
+    title: { bn: "ফসল তোলার সময়", en: "Harvest Timing" },
+    subtitle: { bn: "সর্বোচ্চ সতেজতা", en: "Optimal Freshness" },
+    description: {
+      bn: "সর্বোচ্চ সতেজতা ও পুষ্টিগুণের জন্য শাক-সবজি সকালবেলা তুলুন।",
+      en: "Harvest leafy greens early in the morning for maximum freshness and nutritional value.",
+    },
   },
 ];
 
 export function FarmTips() {
+  const { locale } = useUIStore();
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
   return (
@@ -151,7 +189,7 @@ export function FarmTips() {
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.7, ease: "easeInOut" }}
+      transition={{ duration: 0.7, ease: EASE }}
       className="relative hidden overflow-hidden font-inter lg:block lg:py-20"
     >
       {/* Background */}
@@ -171,24 +209,24 @@ export function FarmTips() {
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
+          transition={{ duration: 0.6, ease: EASE }}
           className="mb-12 text-center"
         >
-          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-accent">
-            EXPLORE PROJECTS
+          <p className="font-bangla mb-2 text-sm font-semibold uppercase tracking-widest text-accent">
+            {locale === "bn" ? "কৃষি টিপস" : "Explore Tips"}
           </p>
-          <h2 className="text-4xl font-extrabold text-white sm:text-5xl">
-            Recently Farm Tips
+          <h2 className="font-bangla text-4xl font-extrabold text-white sm:text-5xl">
+            {locale === "bn"
+              ? "সাম্প্রতিক কৃষি পরামর্শ"
+              : "Recently Added Farm Tips"}
           </h2>
         </motion.div>
 
         {/* Cards */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.7, ease: "easeInOut" }}
-          className="flex items-center justify-center gap-4 transition-all duration-700"
+          layout
+          className="flex items-center justify-center gap-4"
+          onMouseLeave={() => setHoveredIndex(null)}
         >
           {tipsData.map((tip, index) => (
             <TipCard
@@ -197,6 +235,7 @@ export function FarmTips() {
               index={index}
               hoveredIndex={hoveredIndex}
               setHoveredIndex={setHoveredIndex}
+              locale={locale}
             />
           ))}
         </motion.div>
