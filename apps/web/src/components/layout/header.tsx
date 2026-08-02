@@ -29,7 +29,6 @@ export function Header() {
   const [mounted, setMounted] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
-  // avoid hydration mismatch for theme icon
   React.useEffect(() => setMounted(true), []);
 
   const t = dictionary[locale];
@@ -45,7 +44,6 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm">
       <div className="mx-auto flex h-[76px] max-w-[1200px] items-center justify-between px-6 lg:px-8">
-        {/* Logo */}
         <Link
           href="/"
           className="flex items-center gap-2 font-bangla text-xl font-bold text-primary"
@@ -54,7 +52,6 @@ export function Header() {
           FarmIQ
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
           {navLinks.map((link) => (
             <Link
@@ -67,9 +64,7 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Right actions */}
         <div className="flex items-center gap-2">
-          {/* Search - desktop only, icon-triggered could expand; kept simple here */}
           <div className="relative hidden lg:block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -78,7 +73,6 @@ export function Header() {
             />
           </div>
 
-          {/* Language toggle */}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -108,7 +102,6 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Dark mode toggle */}
           <Button
             variant="ghost"
             size="icon"
@@ -123,20 +116,18 @@ export function Header() {
             )}
           </Button>
 
-          {/* Auth buttons - desktop */}
           <div className="hidden items-center gap-2 md:flex">
-            <Button variant="outline" render={<Link href="/login" />}>
-              {t.header.login}
+            <Button variant="outline" asChild>
+              <Link href="/login">{t.header.login}</Link>
             </Button>
             <Button
               className="bg-primary text-white hover:bg-primary-hover"
-              render={<Link href="/register" />}
+              asChild
             >
-              {t.header.register}
+              <Link href="/register">{t.header.register}</Link>
             </Button>
           </div>
 
-          {/* Mobile menu trigger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
               render={
@@ -162,14 +153,14 @@ export function Header() {
                 ))}
               </nav>
               <div className="mt-6 flex flex-col gap-2 border-t border-border pt-6">
-                <Button variant="outline" render={<Link href="/login" />}>
-                  {t.header.login}
+                <Button variant="outline" asChild>
+                  <Link href="/login">{t.header.login}</Link>
                 </Button>
                 <Button
                   className="bg-primary text-white hover:bg-primary-hover"
-                  render={<Link href="/register" />}
+                  asChild
                 >
-                  {t.header.register}
+                  <Link href="/register">{t.header.register}</Link>
                 </Button>
               </div>
             </SheetContent>
