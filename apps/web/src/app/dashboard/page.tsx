@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   ImageIcon,
   Package,
   ShoppingBag,
+  Inbox,
   Plus,
-  MapPin,
   ChevronLeft,
   ChevronRight,
+  Check,
+  X,
 } from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
@@ -34,7 +37,7 @@ interface OrderItem {
   id: string;
   quantity: number;
   status: string;
-  totalAmount?: number;
+  totalPrice: number;
   createdAt: string;
   product: {
     id: string;
@@ -43,6 +46,10 @@ interface OrderItem {
     unit: string;
     imageUrl: string | null;
   };
+}
+
+interface SellerOrderItem extends OrderItem {
+  buyer: { id: string; name: string; phone: string | null };
 }
 
 const STATUS_STYLE: Record<
@@ -111,6 +118,12 @@ const STATUS_STYLE: Record<
   },
 };
 
+const DEFAULT_STATUS_STYLE = STATUS_STYLE.PAYMENT_PENDING as {
+  bn: string;
+  en: string;
+  className: string;
+};
+
 export default function DashboardPage() {
   const { locale } = useUIStore();
   const router = useRouter();
@@ -133,6 +146,15 @@ export default function DashboardPage() {
   const [loadingOrders, setLoadingOrders] = React.useState(true);
   const [orderPage, setOrderPage] = React.useState(1);
 
+  const [sellerOrders, setSellerOrders] = React.useState<SellerOrderItem[]>([]);
+  const [sellerOrdersMeta, setSellerOrdersMeta] = React.useState<{
+    page: number;
+    totalPages: number;
+  } | null>(null);
+  const [loadingSellerOrders, setLoadingSellerOrders] = React.useState(true);
+  const [sellerOrderPage, setSellerOrderPage] = React.useState(1);
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null);
+
   function authHeaders() {
     const token = localStorage.getItem("farmiq_access_token");
     return { Authorization: `Bearer ${token}` };
@@ -150,7 +172,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/products/my-products?page=${productPage}&limit=8`,
-          { headers: authHeaders() },
+          { headers: authHeaders() }
         );
         const result = await res.json();
         setProducts(result?.data ?? []);
@@ -170,7 +192,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/orders/my-orders?page=${orderPage}&limit=8`,
-          { headers: authHeaders() },
+          { headers: authHeaders() }
         );
         const result = await res.json();
         setOrders(result?.data ?? []);
@@ -183,6 +205,54 @@ export default function DashboardPage() {
     }
     loadOrders();
   }, [orderPage]);
+
+  const loadSellerOrders = React.useCallback(async () => {
+    setLoadingSellerOrders(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/seller-orders?page=${sellerOrderPage}&limit=8`,
+        { headers: authHeaders() }
+      );
+      const result = await res.json();
+      setSellerOrders(result?.data ?? []);
+      setSellerOrdersMeta(result?.meta ?? null);
+    } catch {
+      setSellerOrders([]);
+    } finally {
+      setLoadingSellerOrders(false);
+    }
+  }, [sellerOrderPage]);
+
+  React.useEffect(() => {
+    loadSellerOrders();
+  }, [loadSellerOrders]);
+
+  async function updateOrderStatus(orderId: string, status: string) {
+    setUpdatingId(orderId);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result?.message ?? "Update failed");
+      }
+      toast.success(locale === "bn" ? "অর্ডার আপডেট হয়েছে" : "Order updated");
+      loadSellerOrders();
+    } catch {
+      toast.error(locale === "bn" ? "আপডেট করা যায়নি" : "Couldn't update order");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-10 lg:px-8">
@@ -223,6 +293,10 @@ export default function DashboardPage() {
             <ShoppingBag className="h-4 w-4" />
             {locale === "bn" ? "আমার অর্ডার" : "My Orders"}
           </TabsTrigger>
+          <TabsTrigger value="sellerOrders" className="gap-1.5 font-bangla">
+            <Inbox className="h-4 w-4" />
+            {locale === "bn" ? "বিক্রিত অর্ডার" : "Orders Received"}
+          </TabsTrigger>
         </TabsList>
 
         {/* My Products */}
@@ -238,7 +312,6 @@ export default function DashboardPage() {
             </div>
           ) : products.length === 0 ? (
             <EmptyState
-              locale={locale}
               icon={<Package className="h-9 w-9 text-muted-foreground" />}
               text={
                 locale === "bn"
@@ -247,9 +320,7 @@ export default function DashboardPage() {
               }
               ctaHref="/sell"
               ctaText={
-                locale === "bn"
-                  ? "প্রথম পণ্য যোগ করুন"
-                  : "Add your first product"
+                locale === "bn" ? "প্রথম পণ্য যোগ করুন" : "Add your first product"
               }
             />
           ) : (
@@ -304,7 +375,7 @@ export default function DashboardPage() {
           )}
         </TabsContent>
 
-        {/* My Orders */}
+        {/* My Orders (as buyer) */}
         <TabsContent value="orders" className="mt-6">
           {loadingOrders ? (
             <div className="space-y-3">
@@ -317,7 +388,6 @@ export default function DashboardPage() {
             </div>
           ) : orders.length === 0 ? (
             <EmptyState
-              locale={locale}
               icon={<ShoppingBag className="h-9 w-9 text-muted-foreground" />}
               text={
                 locale === "bn"
@@ -331,10 +401,7 @@ export default function DashboardPage() {
             <>
               <div className="space-y-3">
                 {orders.map((order) => {
-                  
-                    const style =
-                      STATUS_STYLE[order.status] ??
-                      STATUS_STYLE.PAYMENT_PENDING!;
+                  const style = STATUS_STYLE[order.status] ?? DEFAULT_STATUS_STYLE;
                   return (
                     <Link
                       key={order.id}
@@ -359,13 +426,10 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-0.5 font-bangla text-xs text-muted-foreground">
                           {order.quantity} {order.product.unit} · ৳
-                          {order.totalAmount ??
-                            order.product.price * order.quantity}
+                          {order.totalPrice}
                         </div>
                       </div>
-                      <Badge
-                        className={`shrink-0 font-bangla ${style.className}`}
-                      >
+                      <Badge className={`shrink-0 font-bangla ${style.className}`}>
                         {locale === "bn" ? style.bn : style.en}
                       </Badge>
                     </Link>
@@ -381,19 +445,122 @@ export default function DashboardPage() {
             </>
           )}
         </TabsContent>
+
+        {/* Orders Received (as seller) */}
+        <TabsContent value="sellerOrders" className="mt-6">
+          {loadingSellerOrders ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[100px] animate-pulse rounded-xl border border-border bg-surface"
+                />
+              ))}
+            </div>
+          ) : sellerOrders.length === 0 ? (
+            <EmptyState
+              icon={<Inbox className="h-9 w-9 text-muted-foreground" />}
+              text={
+                locale === "bn"
+                  ? "আপনার পণ্যে এখনো কোনো অর্ডার আসেনি"
+                  : "No orders received on your products yet"
+              }
+              ctaHref="/sell"
+              ctaText={locale === "bn" ? "আরও পণ্য যোগ করুন" : "List more products"}
+            />
+          ) : (
+            <>
+              <div className="space-y-3">
+                {sellerOrders.map((order) => {
+                  const style = STATUS_STYLE[order.status] ?? DEFAULT_STATUS_STYLE;
+                  const canAct = order.status === "PAYMENT_CONFIRMED";
+                  return (
+                    <div
+                      key={order.id}
+                      className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-surface p-4"
+                    >
+                      <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        {order.product.imageUrl ? (
+                          <Image
+                            src={order.product.imageUrl}
+                            alt={order.product.title}
+                            fill
+                            className="rounded-lg object-cover"
+                          />
+                        ) : (
+                          <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-bangla text-sm font-semibold">
+                          {order.product.title}
+                        </div>
+                        <div className="mt-0.5 font-bangla text-xs text-muted-foreground">
+                          {locale === "bn" ? "ক্রেতা: " : "Buyer: "}
+                          {order.buyer.name}
+                          {order.buyer.phone ? ` · ${order.buyer.phone}` : ""}
+                        </div>
+                        <div className="mt-0.5 font-bangla text-xs text-muted-foreground">
+                          {order.quantity} {order.product.unit} · ৳{order.totalPrice}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {canAct && (
+                          <>
+                            <Button
+                              size="sm"
+                              disabled={updatingId === order.id}
+                              onClick={() =>
+                                updateOrderStatus(order.id, "SELLER_CONFIRMED")
+                              }
+                              className="gap-1.5 bg-success text-white hover:bg-success/90"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              {locale === "bn" ? "গ্রহণ" : "Accept"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={updatingId === order.id}
+                              onClick={() =>
+                                updateOrderStatus(order.id, "SELLER_REJECTED")
+                              }
+                              className="gap-1.5 text-danger hover:bg-danger/10"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              {locale === "bn" ? "বাতিল" : "Reject"}
+                            </Button>
+                          </>
+                        )}
+                        <Badge className={`shrink-0 font-bangla ${style.className}`}>
+                          {locale === "bn" ? style.bn : style.en}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <PaginationBar
+                locale={locale}
+                page={sellerOrderPage}
+                totalPages={sellerOrdersMeta?.totalPages ?? 1}
+                onPageChange={setSellerOrderPage}
+              />
+            </>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
 
 function EmptyState({
-  locale,
   icon,
   text,
   ctaHref,
   ctaText,
 }: {
-  locale: "bn" | "en";
   icon: React.ReactNode;
   text: string;
   ctaHref: string;

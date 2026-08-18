@@ -84,18 +84,13 @@ export default function ProductDetailPage() {
     return !!localStorage.getItem("farmiq_access_token");
   }
 
-  function handleOrder() {
-    if (!isLoggedIn()) {
-      router.push("/login");
-      return;
-    }
-    // TODO: Order module wire হবে এখানে, যখন Order flow page বানানো হবে
-    toast.info(
-      locale === "bn"
-        ? "অর্ডার ফিচার শীঘ্রই আসছে"
-        : "Order feature coming soon",
-    );
+function handleOrder() {
+  if (!isLoggedIn()) {
+    router.push("/login");
+    return;
   }
+  router.push(`/checkout?productId=${product?.id}&quantity=${qty}`);
+}
 
   function handleChat() {
     if (!isLoggedIn()) {
