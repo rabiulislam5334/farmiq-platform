@@ -84,23 +84,37 @@ export default function ProductDetailPage() {
     return !!localStorage.getItem("farmiq_access_token");
   }
 
-function handleOrder() {
-  if (!isLoggedIn()) {
-    router.push("/login");
-    return;
-  }
-  router.push(`/checkout?productId=${product?.id}&quantity=${qty}`);
-}
-
-  function handleChat() {
+  function handleOrder() {
     if (!isLoggedIn()) {
       router.push("/login");
       return;
     }
-    // TODO: Chat module wire হবে এখানে, যখন Chat page বানানো হবে
-    toast.info(
-      locale === "bn" ? "চ্যাট ফিচার শীঘ্রই আসছে" : "Chat feature coming soon",
-    );
+    router.push(`/checkout?productId=${product?.id}&quantity=${qty}`);
+  }
+
+  async function handleChat() {
+    if (!isLoggedIn()) {
+      router.push("/login");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("farmiq_access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/rooms`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ productId: product?.id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result?.message ?? "Failed to start chat");
+      router.push(`/chat?room=${result.data.id}`);
+    } catch {
+      toast.error(
+        locale === "bn" ? "চ্যাট শুরু করা যায়নি" : "Couldn't start chat",
+      );
+    }
   }
 
   if (loading) {
