@@ -5,10 +5,28 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ImageIcon, MapPin, Phone, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import {
+  ImageIcon,
+  MapPin,
+  Phone,
+  ChevronRight,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface OrderDetail {
   id: string;
@@ -98,6 +116,9 @@ const DEFAULT_STATUS_STYLE = STATUS_STYLE.PAYMENT_PENDING as {
   className: string;
 };
 
+// যে স্ট্যাটাসে buyer বিরোধ তৈরি করতে পারবে
+const DISPUTABLE_STATUSES = ["SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"];
+
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -107,33 +128,86 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
 
+  const [disputeOpen, setDisputeOpen] = React.useState(false);
+  const [reason, setReason] = React.useState("");
+  const [submittingDispute, setSubmittingDispute] = React.useState(false);
+  const [disputeError, setDisputeError] = React.useState<string | null>(null);
+
+  function authHeaders() {
+    const token = localStorage.getItem("farmiq_access_token");
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  const loadOrder = React.useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/${params.id}`,
+        { headers: authHeaders() },
+      );
+      if (res.status === 404 || res.status === 403) {
+        setNotFound(true);
+        return;
+      }
+      const result = await res.json();
+      setOrder(result.data);
+    } catch {
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
   React.useEffect(() => {
     if (!localStorage.getItem("farmiq_access_token")) {
       router.push("/login");
       return;
     }
+    if (params.id) loadOrder();
+  }, [params.id, router, loadOrder]);
 
-    async function load() {
-      try {
-        const token = localStorage.getItem("farmiq_access_token");
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/orders/${params.id}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (res.status === 404 || res.status === 403) {
-          setNotFound(true);
-          return;
-        }
-        const result = await res.json();
-        setOrder(result.data);
-      } catch {
-        setNotFound(true);
-      } finally {
-        setLoading(false);
-      }
+  async function handleCreateDispute() {
+    if (!order) return;
+    if (reason.trim().length < 10) {
+      setDisputeError(
+        locale === "bn"
+          ? "কমপক্ষে ১০ অক্ষরের বিবরণ দিন"
+          : "Please provide at least 10 characters",
+      );
+      return;
     }
-    if (params.id) load();
-  }, [params.id, router]);
+    setDisputeError(null);
+    setSubmittingDispute(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disputes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ orderId: order.id, reason: reason.trim() }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        const msg = Array.isArray(result.message)
+          ? result.message[0]
+          : result.message;
+        throw new Error(msg ?? "Failed to create dispute");
+      }
+      toast.success(
+        locale === "bn" ? "বিরোধ জমা দেওয়া হয়েছে" : "Dispute submitted",
+      );
+      setDisputeOpen(false);
+      setReason("");
+      loadOrder();
+    } catch (err) {
+      setDisputeError(
+        err instanceof Error
+          ? err.message
+          : locale === "bn"
+            ? "জমা দেওয়া যায়নি"
+            : "Couldn't submit",
+      );
+    } finally {
+      setSubmittingDispute(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -145,14 +219,11 @@ export default function OrderDetailPage() {
 
   if (notFound || !order) {
     return (
-      <div className="mx-auto max-w-[700px] px-6 py-24 text-center">
+      <div className="mx-auto flex max-w-[700px] flex-col items-center justify-center px-6 py-24 text-center">
         <p className="font-bangla text-muted-foreground">
           {locale === "bn" ? "অর্ডার পাওয়া যায়নি" : "Order not found"}
         </p>
-        <Link
-          href="/dashboard"
-          className="mt-3 inline-block text-primary hover:underline"
-        >
+        <Link href="/dashboard" className="mt-3 text-primary hover:underline">
           {locale === "bn" ? "ড্যাশবোর্ডে ফিরুন →" : "Back to dashboard →"}
         </Link>
       </div>
@@ -160,6 +231,7 @@ export default function OrderDetailPage() {
   }
 
   const style = STATUS_STYLE[order.status] ?? DEFAULT_STATUS_STYLE;
+  const canDispute = DISPUTABLE_STATUSES.includes(order.status);
 
   return (
     <div className="mx-auto max-w-[700px] px-6 py-10 lg:px-8">
@@ -246,6 +318,65 @@ export default function OrderDetailPage() {
             </p>
           </div>
         </div>
+
+        {/* Dispute action */}
+        {canDispute && (
+          <div className="mt-6 border-t border-border pt-6">
+            <Dialog open={disputeOpen} onOpenChange={setDisputeOpen}>
+              <DialogTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 text-danger hover:bg-danger/10"
+                  />
+                }
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {locale === "bn" ? "সমস্যা রিপোর্ট করুন" : "Report a Problem"}
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="font-bangla">
+                    {locale === "bn"
+                      ? "সমস্যার বিবরণ দিন"
+                      : "Describe the Issue"}
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  {disputeError && (
+                    <div className="rounded-lg bg-danger/10 px-3.5 py-2.5 font-bangla text-sm text-danger">
+                      {disputeError}
+                    </div>
+                  )}
+                  <Textarea
+                    rows={4}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder={
+                      locale === "bn"
+                        ? "কী সমস্যা হয়েছে বিস্তারিত লিখুন..."
+                        : "Describe what went wrong in detail..."
+                    }
+                    className="font-bangla"
+                  />
+                  <DialogFooter>
+                    <Button
+                      onClick={handleCreateDispute}
+                      disabled={submittingDispute}
+                      className="w-full gap-2 bg-primary text-white hover:bg-primary-hover"
+                    >
+                      {submittingDispute && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                      {locale === "bn" ? "জমা দিন" : "Submit"}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </motion.div>
     </div>
   );
