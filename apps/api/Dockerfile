@@ -10,31 +10,34 @@ FROM node:20-slim AS builder
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 
 COPY --from=pruner /app/out/full/ .
 
-# Prisma-এর জন্য openssl ইনস্টল করা আবশ্যক
-RUN apt-get update -y && apt-get install -y openssl
-
-# Prisma generate কমান্ডটি api ওয়ার্কস্পেসের ভেতরে গিয়ে চালান
 RUN cd apps/api && pnpm exec prisma generate
 
-# বিল্ড কমান্ডটি রুট থেকে চালান (Turborepo এর জন্য)
 RUN pnpm turbo build --filter=api
+
+# build শেষ, এখন devDependencies ছেঁটে ফেলে শুধু production deps রাখা হচ্ছে
+RUN pnpm install --prod --frozen-lockfile
 
 # ---- Stage 3: Production runner ----
 FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# রানার স্টেজেও Prisma-এর জন্য openssl লাগবে
-RUN apt-get update -y && apt-get install -y openssl
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app .
+# node:20-slim ইমেজে ডিফল্টভাবেই একটা non-root "node" ইউজার (UID 1000) থাকে
+COPY --from=builder --chown=node:node /app .
+
+USER node
 
 EXPOSE 4000
 
-# মাইগ্রেশন এবং অ্যাপ রান করার কমান্ডটি api ফোল্ডার থেকে এক্সিকিউট করুন
-CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh", "-c", "cd apps/api && pnpm exec prisma migrate deploy && node dist/src/main.js"]
