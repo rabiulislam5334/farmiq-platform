@@ -22,9 +22,6 @@ RUN cd apps/api && pnpm exec prisma generate
 
 RUN pnpm turbo build --filter=api
 
-# build শেষ, এখন devDependencies ছেঁটে ফেলে শুধু production deps রাখা হচ্ছে
-RUN pnpm install --prod --frozen-lockfile
-
 # ---- Stage 3: Production runner ----
 FROM node:20-slim AS runner
 WORKDIR /app
@@ -33,11 +30,10 @@ ENV NODE_ENV=production
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# node:20-slim ইমেজে ডিফল্টভাবেই একটা non-root "node" ইউজার (UID 1000) থাকে
 COPY --from=builder --chown=node:node /app .
 
 USER node
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "cd apps/api && pnpm exec prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && node dist/src/main.js"]
