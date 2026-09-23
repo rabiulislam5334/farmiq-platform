@@ -36,4 +36,4 @@ USER node
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && node $(find dist -name main.js | head -n1)"]
