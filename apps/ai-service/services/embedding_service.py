@@ -1,14 +1,23 @@
-from sentence_transformers import SentenceTransformer
+import os
+from dotenv import load_dotenv
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-# e5 সিরিজ multilingual model — বাংলা technical/mixed-language text-এ ভালো ফল দেয়
-_model = SentenceTransformer("intfloat/multilingual-e5-small")
+load_dotenv()
+
+# ডিবাগিংয়ের জন্য প্রিন্ট (আউটপুটে দেখবেন কোন মডেল লোড হচ্ছে)
+print("=== Loading Embedding Model: gemini-embedding-001 ===")
+
+embeddings_model = GoogleGenerativeAIEmbeddings(
+    model="models/gemini-embedding-001",  # নতুন মডেল
+    google_api_key=os.getenv("GEMINI_API_KEY"),
+)
 
 
 def get_embedding(text: str, is_query: bool = False) -> list[float]:
     """
-    একটা text-কে 384-dimension vector-এ রূপান্তর করে।
-    e5 model-এর নিয়ম অনুযায়ী query আর document-এর জন্য আলাদা prefix লাগে।
+    টেক্সট-কে ভেক্টরে রূপান্তর করে Google Gemini-এর hosted API দিয়ে।
     """
-    prefix = "query: " if is_query else "passage: "
-    embedding = _model.encode(prefix + text)
-    return embedding.tolist()
+    if is_query:
+        return embeddings_model.embed_query(text)
+    else:
+        return embeddings_model.embed_documents([text])[0]
