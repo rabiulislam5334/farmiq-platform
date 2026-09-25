@@ -4,7 +4,13 @@ import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { io, type Socket } from "socket.io-client";
-import { Send, ImageIcon, MessageCircle, ArrowLeft } from "lucide-react";
+import {
+  Send,
+  ImageIcon,
+  MessageCircle,
+  ArrowLeft,
+  Loader2,
+} from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
 import { Input } from "@/components/ui/input";
@@ -25,7 +31,8 @@ interface Message {
   sender: { id: string; name: string };
 }
 
-export default function ChatPage() {
+// ১. মূল Chat UI ও SearchParams লজিকটি ChatContent-এ রাখা হয়েছে
+function ChatContent() {
   const { locale } = useUIStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -339,5 +346,20 @@ export default function ChatPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// ২. মূল ChatPage-এ React.Suspense বাউন্ডারি যুক্ত করে ডিফল্ট এক্সপোর্ট করা হলো
+export default function ChatPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex h-[calc(100vh-76px)] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <ChatContent />
+    </React.Suspense>
   );
 }

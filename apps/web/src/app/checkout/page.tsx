@@ -10,7 +10,6 @@ import { ImageIcon, Loader2, Wallet, Truck } from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
 import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ProductSummary {
@@ -23,7 +22,8 @@ interface ProductSummary {
 
 type PaymentMethod = "CASH_ON_DELIVERY" | "SSLCOMMERZ";
 
-export default function CheckoutPage() {
+// ১. মূল কন্টেন্ট কম্পোনেন্ট যেখানে useSearchParams ও বাকি লজিক থাকবে
+function CheckoutContent() {
   const { locale } = useUIStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -290,5 +290,20 @@ export default function CheckoutPage() {
         </Button>
       </motion.div>
     </div>
+  );
+}
+
+// ২. মূল পেজ কম্পোনেন্ট যা Suspense দিয়ে Wrapper হিসেবে কাজ করবে
+export default function CheckoutPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="mx-auto max-w-[600px] px-6 py-16">
+          <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+        </div>
+      }
+    >
+      <CheckoutContent />
+    </React.Suspense>
   );
 }

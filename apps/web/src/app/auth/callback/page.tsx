@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const { locale } = useUIStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,8 +27,6 @@ export default function AuthCallbackPage() {
       try {
         localStorage.setItem("farmiq_access_token", accessToken);
 
-        // Token দিয়ে user profile fetch করে localStorage-এ সেভ করছি,
-        // যাতে email/password login-এর মতো একই "farmiq_user" data সবসময় থাকে
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -82,16 +81,30 @@ export default function AuthCallbackPage() {
                 : "Couldn't complete login"}
             </p>
 
-            <a
+            <Link
               href="/login"
               className="flex items-center gap-1 font-bangla text-sm font-semibold text-primary hover:underline"
             >
               {locale === "bn" ? "আবার চেষ্টা করুন" : "Try again"}
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-76px)] items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <AuthCallbackContent />
+    </React.Suspense>
   );
 }

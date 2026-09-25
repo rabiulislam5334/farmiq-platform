@@ -19,7 +19,8 @@ interface PaymentRecord {
   };
 }
 
-export default function PaymentSuccessPage() {
+// ১. মূল UI এবং useSearchParams লজিক আলাদা কম্পোনেন্টে রাখা হলো
+function PaymentSuccessContent() {
   const { locale } = useUIStore();
   const searchParams = useSearchParams();
   const tranId = searchParams.get("tran_id");
@@ -115,5 +116,20 @@ export default function PaymentSuccessPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// ২. মূল পেজে Suspense বাউন্ডারি দিয়ে wrap করে default export করা হলো
+export default function PaymentSuccessPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-76px)] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <PaymentSuccessContent />
+    </React.Suspense>
   );
 }

@@ -4,12 +4,13 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { XCircle } from "lucide-react";
+import { XCircle, Loader2 } from "lucide-react";
 
 import { useUIStore } from "@/store/ui-store";
 import { Button } from "@/components/ui/button";
 
-export default function PaymentFailPage() {
+// ১. মূল UI এবং useSearchParams লজিক আলাদা কম্পোনেন্টে রাখা হলো
+function PaymentFailContent() {
   const { locale } = useUIStore();
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason");
@@ -56,5 +57,20 @@ export default function PaymentFailPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// ২. মূল পেজে Suspense বাউন্ডারি দিয়ে wrap করে default export করা হলো
+export default function PaymentFailPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-76px)] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <PaymentFailContent />
+    </React.Suspense>
   );
 }
